@@ -126,7 +126,7 @@ def update_dependencies(file_path):
                                         changes_made = True
 
     if changes_made:
-        with open(file_path, "w", encoding="utf-8") as f:
+        with open(file_path, "w", encoding="utf-8", newline='\n') as f:
             f.write(updated_content)
         print(f"Updated {file_path}")
     else:
