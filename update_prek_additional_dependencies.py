@@ -48,11 +48,14 @@ def get_latest_github_release(owner, repo):
         return None
 
 def update_dependencies(file_path):
+    yaml = YAML()
+    yaml.preserve_quotes = True
+    yaml.indent(mapping=2, sequence=4, offset=2)
+
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             content = f.read()
-        yaml = YAML()
-        data = yaml.load(content)
+            data = yaml.load(content)
     except FileNotFoundError:
         print(f"File not found: {file_path}")
         return
@@ -66,7 +69,7 @@ def update_dependencies(file_path):
                 for hook in repo["hooks"]:
                     if "additional_dependencies" in hook:
                         deps = hook["additional_dependencies"]
-                        for dep in deps:
+                        for i, dep in enumerate(deps):
                             new_dep = None
 
                             # Handle NPM packages (package@version)
@@ -123,7 +126,7 @@ def update_dependencies(file_path):
                                         changes_made = True
 
     if changes_made:
-        with open(file_path, "w", encoding="utf-8") as f:
+        with open(file_path, "w", encoding="utf-8", newline='\n') as f:
             f.write(updated_content)
         print(f"Updated {file_path}")
     else:
