@@ -35,7 +35,7 @@ def get_latest_github_release(owner, repo):
     try:
         response = requests.get(f"https://api.github.com/repos/{owner}/{repo}/releases/latest", timeout=10)
         if response.status_code == 404:
-             # Fallback to tags if no releases
+            # Fallback to tags if no releases
             response = requests.get(f"https://api.github.com/repos/{owner}/{repo}/tags", timeout=10)
             response.raise_for_status()
             tags = response.json()
@@ -99,7 +99,7 @@ def update_dependencies(file_path):
                                 full_path, owner, repo_name, current_version = go_match.groups()
                                 latest_version = get_latest_github_release(owner, repo_name)
                                 if latest_version and latest_version != current_version:
-                                     # Ensure v-prefix consistency
+                                    # Ensure v-prefix consistency
                                     if current_version.startswith('v') and not latest_version.startswith('v'):
                                         latest_version = 'v' + latest_version
                                     elif not current_version.startswith('v') and latest_version.startswith('v'):
