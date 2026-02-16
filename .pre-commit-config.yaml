@@ -11,8 +11,7 @@ repos:
         description: Detects merge conflict markers in files
       - id: check-case-conflict
         name: Check Case Conflicts
-        description: Detects files that would conflict on case-insensitive
-          filesystems
+        description: Detects files that would conflict on case-insensitive filesystems
       - id: check-added-large-files
         name: Check Added Large Files
         description: Prevents adding large files to the repository
@@ -55,9 +54,7 @@ repos:
         additional_dependencies:
           - prettier@3.8.1
         args: ["--check"]
-        files:
-          "(?i)(\\.(md|markdown|ya?ml|json)$|^(README|LICENSE|CONTRIBUTING|CODE_OF_CONDUCT|SECURITY|SUPPORT)(\\\
-          .md)?$)"
+        files: "(?i)(\\.(md|markdown|ya?ml|json)$|^(README|LICENSE|CONTRIBUTING|CODE_OF_CONDUCT|SECURITY|SUPPORT)(\\.md)?$)"
       - id: justfile-format-check
         name: Justfile Format Check
         language: python
