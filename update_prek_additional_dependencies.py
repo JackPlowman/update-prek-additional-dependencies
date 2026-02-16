@@ -48,25 +48,27 @@ def get_latest_github_release(owner, repo):
         return None
 
 def update_dependencies(file_path):
-    yaml = YAML()
-    yaml.preserve_quotes = True
-
     try:
-        with open(file_path, "r") as f:
-            data = yaml.load(f)
+        with open(file_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        yaml = YAML()
+        data = yaml.load(content)
     except FileNotFoundError:
         print(f"File not found: {file_path}")
         return
 
-    updated = False
+    updated_content = content
+    changes_made = False
 
     if "repos" in data:
         for repo in data["repos"]:
             if "hooks" in repo:
                 for hook in repo["hooks"]:
                     if "additional_dependencies" in hook:
-                        new_deps = []
-                        for dep in hook["additional_dependencies"]:
+                        deps = hook["additional_dependencies"]
+                        for dep in deps:
+                            new_dep = None
+
                             # Handle NPM packages (package@version)
                             npm_match = re.match(r"^(@?[a-z0-9-./]+)@(\d+\.\d+\.\d+)$", dep)
                             if npm_match:
@@ -74,11 +76,7 @@ def update_dependencies(file_path):
                                 latest_version = get_latest_npm_version(package)
                                 if latest_version and latest_version != current_version:
                                     print(f"Updating {package}: {current_version} -> {latest_version}")
-                                    new_deps.append(f"{package}@{latest_version}")
-                                    updated = True
-                                else:
-                                    new_deps.append(dep)
-                                continue
+                                    new_dep = f"{package}@{latest_version}"
 
                             # Handle PyPI packages (package==version)
                             pypi_match = re.match(r"^([a-zA-Z0-9-_]+)==(\d+\.\d+\.\d+)$", dep)
@@ -87,11 +85,7 @@ def update_dependencies(file_path):
                                 latest_version = get_latest_pypi_version(package)
                                 if latest_version and latest_version != current_version:
                                     print(f"Updating {package}: {current_version} -> {latest_version}")
-                                    new_deps.append(f"{package}=={latest_version}")
-                                    updated = True
-                                else:
-                                    new_deps.append(dep)
-                                continue
+                                    new_dep = f"{package}=={latest_version}"
 
                             # Handle Go packages (github.com/owner/repo/...@version)
                             go_match = re.match(r"^(github\.com/([^/]+)/([^/]+)/?.*)@(v?\d+\.\d+\.\d+)$", dep)
@@ -107,21 +101,30 @@ def update_dependencies(file_path):
 
                                     if latest_version != current_version:
                                         print(f"Updating {owner}/{repo_name}: {current_version} -> {latest_version}")
-                                        new_deps.append(f"{full_path}@{latest_version}")
-                                        updated = True
-                                    else:
-                                        new_deps.append(dep)
-                                else:
-                                    new_deps.append(dep)
-                                continue
+                                        new_dep = f"{full_path}@{latest_version}"
 
-                            new_deps.append(dep)
+                            if new_dep:
+                                # Replace only the specific dependency string in the file content.
+                                # Check for quoted versions first as ruamel.yaml strips quotes.
+                                quotes = ['"', "'"]
+                                replaced = False
+                                for q in quotes:
+                                    quoted_dep = f"{q}{dep}{q}"
+                                    if quoted_dep in updated_content:
+                                        updated_content = updated_content.replace(quoted_dep, f"{q}{new_dep}{q}")
+                                        replaced = True
+                                        changes_made = True
+                                        break
 
-                        hook["additional_dependencies"] = new_deps
+                                if not replaced:
+                                    # Fallback to unquoted replacement
+                                    if dep in updated_content:
+                                        updated_content = updated_content.replace(dep, new_dep)
+                                        changes_made = True
 
-    if updated:
-        with open(file_path, "w") as f:
-            yaml.dump(data, f)
+    if changes_made:
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(updated_content)
         print(f"Updated {file_path}")
     else:
         print("No updates found.")
