@@ -2,7 +2,12 @@
 name = "project"
 dynamic = ["version"]
 requires-python = "~=3.14.0"
-dependencies = ["ruff==0.15.1", "ty==0.0.17"]
+dependencies = [
+  "ruamel.yaml==0.19.1",
+  "requests==2.32.5",
+  "ruff==0.15.1",
+  "ty==0.0.17",
+]
 
 [tool.uv]
 required-version = "~=0.10.0"
