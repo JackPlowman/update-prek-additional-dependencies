@@ -6,12 +6,13 @@
 # ]
 # ///
 import re
+from pathlib import Path
 
 import requests
 from ruamel.yaml import YAML
 
 
-def get_latest_npm_version(package_name):
+def get_latest_npm_version(package_name: str) -> str | None:
     """Fetch the latest version of an npm package."""
     try:
         response = requests.get(
@@ -19,12 +20,12 @@ def get_latest_npm_version(package_name):
         )
         response.raise_for_status()
         return response.json()["version"]
-    except Exception as e:
+    except requests.RequestException as e:
         print(f"Error fetching npm version for {package_name}: {e}")
         return None
 
 
-def get_latest_pypi_version(package_name):
+def get_latest_pypi_version(package_name: str) -> str | None:
     """Fetch the latest version of a PyPI package."""
     try:
         response = requests.get(
@@ -32,12 +33,12 @@ def get_latest_pypi_version(package_name):
         )
         response.raise_for_status()
         return response.json()["info"]["version"]
-    except Exception as e:
+    except requests.RequestException as e:
         print(f"Error fetching PyPI version for {package_name}: {e}")
         return None
 
 
-def get_latest_github_release(owner, repo):
+def get_latest_github_release(owner: str, repo: str) -> str | None:
     """Fetch the latest release tag from a GitHub repository."""
     try:
         response = requests.get(
@@ -54,23 +55,112 @@ def get_latest_github_release(owner, repo):
                 return tags[0]["name"]
         response.raise_for_status()
         return response.json()["tag_name"]
-    except Exception as e:
+    except requests.RequestException as e:
         print(f"Error fetching GitHub release for {owner}/{repo}: {e}")
         return None
 
 
-def update_dependencies(file_path) -> None:
+def check_npm_dependency(dep: str) -> str | None:
+    """Check and return updated npm dependency."""
+    npm_match = re.match(r"^(@?[a-z0-9-./]+)@(\d+\.\d+\.\d+)$", dep)
+    if npm_match:
+        package, current_version = npm_match.groups()
+        latest_version = get_latest_npm_version(package)
+        if latest_version and latest_version != current_version:
+            print(f"Updating {package}: {current_version} -> {latest_version}")
+            return f"{package}@{latest_version}"
+    return None
+
+
+def check_pypi_dependency(dep: str) -> str | None:
+    """Check and return updated PyPI dependency."""
+    pypi_match = re.match(r"^([a-zA-Z0-9-_]+)==(\d+\.\d+\.\d+)$", dep)
+    if pypi_match:
+        package, current_version = pypi_match.groups()
+        latest_version = get_latest_pypi_version(package)
+        if latest_version and latest_version != current_version:
+            print(f"Updating {package}: {current_version} -> {latest_version}")
+            return f"{package}=={latest_version}"
+    return None
+
+
+def check_go_dependency(dep: str) -> str | None:
+    """Check and return updated Go dependency."""
+    go_match = re.match(r"^(github\.com/([^/]+)/([^/]+)/?.*)@(v?\d+\.\d+\.\d+)$", dep)
+    if not go_match:
+        return None
+
+    full_path, owner, repo_name, current_version = go_match.groups()
+    latest_version = get_latest_github_release(owner, repo_name)
+
+    if latest_version and latest_version != current_version:
+        # Ensure v-prefix consistency
+        if current_version.startswith("v") and not latest_version.startswith("v"):
+            latest_version = "v" + latest_version
+        elif not current_version.startswith("v") and latest_version.startswith("v"):
+            latest_version = latest_version.lstrip("v")
+
+        if latest_version != current_version:
+            print(
+                f"Updating {owner}/{repo_name}: {current_version} -> {latest_version}"
+            )
+            return f"{full_path}@{latest_version}"
+
+    return None
+
+
+def update_content_with_dependency(
+    content: str, old_dep: str, new_dep: str
+) -> tuple[str, bool]:
+    """Replace dependency in content, handling quotes."""
+    quotes = ['"', "'"]
+    for q in quotes:
+        quoted_dep = f"{q}{old_dep}{q}"
+        if quoted_dep in content:
+            return content.replace(quoted_dep, f"{q}{new_dep}{q}"), True
+
+    # Fallback to unquoted replacement
+    if old_dep in content:
+        return content.replace(old_dep, new_dep), True
+
+    return content, False
+
+
+def process_dependencies(deps: list[str], content: str) -> tuple[str, bool]:
+    """Process a list of dependencies and update content."""
+    updated_content = content
+    changes_made = False
+
+    for dep in deps:
+        new_dep = (
+            check_npm_dependency(dep)
+            or check_pypi_dependency(dep)
+            or check_go_dependency(dep)
+        )
+
+        if new_dep:
+            updated_content, replaced = update_content_with_dependency(
+                updated_content, dep, new_dep
+            )
+            if replaced:
+                changes_made = True
+
+    return updated_content, changes_made
+
+
+def update_dependencies(file_path: str) -> None:
+    """Update dependencies in the specified file."""
     yaml = YAML()
     yaml.preserve_quotes = True
     yaml.indent(mapping=2, sequence=4, offset=2)
 
-    try:
-        with open(file_path, encoding="utf-8") as f:
-            content = f.read()
-            data = yaml.load(content)
-    except FileNotFoundError:
+    path = Path(file_path)
+    if not path.exists():
         print(f"File not found: {file_path}")
         return
+
+    content = path.read_text(encoding="utf-8")
+    data = yaml.load(content)
 
     updated_content = content
     changes_made = False
@@ -80,91 +170,15 @@ def update_dependencies(file_path) -> None:
             if "hooks" in repo:
                 for hook in repo["hooks"]:
                     if "additional_dependencies" in hook:
-                        deps = hook["additional_dependencies"]
-                        for _i, dep in enumerate(deps):
-                            new_dep = None
-
-                            # Handle NPM packages (package@version)
-                            npm_match = re.match(
-                                r"^(@?[a-z0-9-./]+)@(\d+\.\d+\.\d+)$", dep
-                            )
-                            if npm_match:
-                                package, current_version = npm_match.groups()
-                                latest_version = get_latest_npm_version(package)
-                                if latest_version and latest_version != current_version:
-                                    print(
-                                        f"Updating {package}: {current_version} -> {latest_version}"
-                                    )
-                                    new_dep = f"{package}@{latest_version}"
-
-                            # Handle PyPI packages (package==version)
-                            pypi_match = re.match(
-                                r"^([a-zA-Z0-9-_]+)==(\d+\.\d+\.\d+)$", dep
-                            )
-                            if pypi_match:
-                                package, current_version = pypi_match.groups()
-                                latest_version = get_latest_pypi_version(package)
-                                if latest_version and latest_version != current_version:
-                                    print(
-                                        f"Updating {package}: {current_version} -> {latest_version}"
-                                    )
-                                    new_dep = f"{package}=={latest_version}"
-
-                            # Handle Go packages (github.com/owner/repo/...@version)
-                            go_match = re.match(
-                                r"^(github\.com/([^/]+)/([^/]+)/?.*)@(v?\d+\.\d+\.\d+)$",
-                                dep,
-                            )
-                            if go_match:
-                                full_path, owner, repo_name, current_version = (
-                                    go_match.groups()
-                                )
-                                latest_version = get_latest_github_release(
-                                    owner, repo_name
-                                )
-                                if latest_version and latest_version != current_version:
-                                    # Ensure v-prefix consistency
-                                    if current_version.startswith(
-                                        "v"
-                                    ) and not latest_version.startswith("v"):
-                                        latest_version = "v" + latest_version
-                                    elif not current_version.startswith(
-                                        "v"
-                                    ) and latest_version.startswith("v"):
-                                        latest_version = latest_version.lstrip("v")
-
-                                    if latest_version != current_version:
-                                        print(
-                                            f"Updating {owner}/{repo_name}: {current_version} -> {latest_version}"
-                                        )
-                                        new_dep = f"{full_path}@{latest_version}"
-
-                            if new_dep:
-                                # Replace only the specific dependency string in the file content.
-                                # Check for quoted versions first as ruamel.yaml strips quotes.
-                                quotes = ['"', "'"]
-                                replaced = False
-                                for q in quotes:
-                                    quoted_dep = f"{q}{dep}{q}"
-                                    if quoted_dep in updated_content:
-                                        updated_content = updated_content.replace(
-                                            quoted_dep, f"{q}{new_dep}{q}"
-                                        )
-                                        replaced = True
-                                        changes_made = True
-                                        break
-
-                                if not replaced:
-                                    # Fallback to unquoted replacement
-                                    if dep in updated_content:
-                                        updated_content = updated_content.replace(
-                                            dep, new_dep
-                                        )
-                                        changes_made = True
+                        new_content, changed = process_dependencies(
+                            hook["additional_dependencies"], updated_content
+                        )
+                        if changed:
+                            updated_content = new_content
+                            changes_made = True
 
     if changes_made:
-        with open(file_path, "w", encoding="utf-8", newline="\n") as f:
-            f.write(updated_content)
+        path.write_text(updated_content, encoding="utf-8", newline="\n")
         print(f"Updated {file_path}")
     else:
         print("No updates found.")
