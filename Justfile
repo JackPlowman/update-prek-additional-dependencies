@@ -85,3 +85,72 @@ editorconfig-check:
 # Install git hooks using prek
 install-git-hooks:
     prek install
+
+# ------------------------------------------------------------------------------
+# General Commands
+# ------------------------------------------------------------------------------
+
+# Install All Python Dependencies
+install:
+    uv sync --all-extras
+
+# Remove all compiled Python files
+clean:
+    find . \( \
+      -name '__pycache__' -o \
+      -name '.coverage' -o \
+      -name '.mypy_cache' -o \
+      -name '.pytest_cache' -o \
+      -name '.ruff_cache' -o \
+      -name '*.pyc' -o \
+      -name '*.pyd' -o \
+      -name '*.pyo' -o \
+      -name 'coverage.xml' -o \
+      -name 'db.sqlite3' \
+    \) -print | xargs rm -rfv
+
+# ------------------------------------------------------------------------------
+# Ruff - Python Linting and Formatting
+# ------------------------------------------------------------------------------
+
+# Fix all Ruff issues
+ruff-fix:
+    just ruff-format-fix
+    just ruff-lint-fix
+
+# Check for all Ruff issues
+ruff-checks:
+    just ruff-format-check
+    just ruff-lint-check
+
+# Check for Ruff issues
+ruff-lint-check:
+    uv run ruff check update_prek_additional_dependencies.py
+
+# Fix Ruff lint issues
+ruff-lint-fix:
+    uv run ruff check update_prek_additional_dependencies.py --fix --unsafe-fixes
+
+# Check for Ruff format issues
+ruff-format-check:
+    uv run ruff format --check update_prek_additional_dependencies.py
+
+# Fix Ruff format issues
+ruff-format-fix:
+    uv run ruff format update_prek_additional_dependencies.py
+
+# ------------------------------------------------------------------------------
+# Ty - Python Type Checking
+# ------------------------------------------------------------------------------
+
+# Check for type issues with Ty
+ty-check:
+    uv run ty check update_prek_additional_dependencies.py
+
+# ------------------------------------------------------------------------------
+# Other Python Tools
+# ------------------------------------------------------------------------------
+
+# Check uv lockfile
+uv-lock-check:
+    uv lock --check
