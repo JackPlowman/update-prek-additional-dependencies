@@ -37,3 +37,62 @@ jobs:
     uses: JackPlowman/reusable-workflows/.github/workflows/codeql-analysis.yml@9b05cbf77da4cc8d3238499a28d179c41cbcf6ac # v2026.02.14.01
     with:
       language: ${{ matrix.language }}
+
+  run-python-lint-checks:
+    name: Run Python Lint Checks
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write # Allow the workflow to upload analysis results
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up dependencies
+        uses: ./.github/actions/setup-dependencies
+      - name: Generate Ruff Sarif
+        run: just ruff-lint-check
+        env:
+          RUFF_OUTPUT_FORMAT: "sarif"
+          RUFF_OUTPUT_FILE: "ruff-results.sarif"
+        continue-on-error: true
+      - name: Upload Ruff analysis results to GitHub
+        uses: github/codeql-action/upload-sarif@45cbd0c69e560cd9e7cd7f8c32362050c9b7ded2 # v4.32.2
+        with:
+          sarif_file: ruff-results.sarif
+          wait-for-processing: true
+      - name: Check Python Code Linting (Ruff)
+        run: just ruff-lint-check
+        env:
+          RUFF_OUTPUT_FORMAT: "github"
+
+  run-python-format-checks:
+    name: Run Python Format Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up dependencies
+        uses: ./.github/actions/setup-dependencies
+      - name: Check Python Code Format (Ruff)
+        run: just ruff-format-check
+        env:
+          RUFF_OUTPUT_FORMAT: "github"
+
+  run-python-type-checks:
+    name: Run Python Type Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up dependencies
+        uses: ./.github/actions/setup-dependencies
+      - name: Check Python Code Types (ty) Checks
+        run: just ty-check
