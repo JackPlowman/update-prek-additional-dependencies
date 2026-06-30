@@ -2,7 +2,7 @@
 # requires-python = ">=3.14"
 # dependencies = [
 #     "ruamel.yaml==0.19.1",
-#     "requests==2.32.5",
+#     "requests==2.34.2",
 # ]
 # ///
 import re
