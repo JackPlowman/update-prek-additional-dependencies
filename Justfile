@@ -110,7 +110,6 @@ prek-update-additional-dependencies:
 update:
     just pinact-update
     just prek-update
-    just prek-update-additional-dependencies
 
 # ------------------------------------------------------------------------------
 # General Commands
