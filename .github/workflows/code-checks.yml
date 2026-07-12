@@ -26,7 +26,7 @@ jobs:
       actions: read # Allow the workflow to read actions metadata
       pull-requests: write # Allow the workflow to create and modify pull request comments
       security-events: write # Allow the workflow to upload analysis results
-    uses: JackPlowman/reusable-workflows/.github/workflows/common-code-checks.yml@770e0f8d83d2cf12795ae93c33ff48b731c41201 # v2026.06.30.01
+    uses: JackPlowman/reusable-workflows/.github/workflows/common-code-checks.yml@c0ea11ac152de03bcdc6415d89b51a178f68e754 # v2026.07.05.01
     secrets:
       workflow_github_token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -38,7 +38,7 @@ jobs:
     strategy:
       matrix:
         language: [actions, python]
-    uses: JackPlowman/reusable-workflows/.github/workflows/codeql-analysis.yml@770e0f8d83d2cf12795ae93c33ff48b731c41201 # v2026.06.30.01
+    uses: JackPlowman/reusable-workflows/.github/workflows/codeql-analysis.yml@c0ea11ac152de03bcdc6415d89b51a178f68e754 # v2026.07.05.01
     with:
       language: ${{ matrix.language }}
 
@@ -54,7 +54,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Install Python and UV
-        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        uses: astral-sh/setup-uv@d31148d669074a8d0a63714ba94f3201e7020bc3 # v8.3.0
       - name: Set up Just
         uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
       - name: Install Python Dependencies
@@ -67,7 +67,7 @@ jobs:
           RUFF_OUTPUT_FILE: "ruff-results.sarif"
         continue-on-error: true
       - name: Upload Ruff analysis results to GitHub
-        uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4.36.2
+        uses: github/codeql-action/upload-sarif@54f647b7e1bb85c95cddabcd46b0c578ec92bc1a # v4.36.3
         with:
           sarif_file: ruff-results.sarif
           wait-for-processing: true
@@ -86,7 +86,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Install Python and UV
-        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        uses: astral-sh/setup-uv@d31148d669074a8d0a63714ba94f3201e7020bc3 # v8.3.0
       - name: Set up Just
         uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
       - name: Install Python Dependencies
@@ -107,7 +107,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Install Python and UV
-        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        uses: astral-sh/setup-uv@d31148d669074a8d0a63714ba94f3201e7020bc3 # v8.3.0
       - name: Set up Just
         uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
       - name: Install Python Dependencies
