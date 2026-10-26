@@ -14,7 +14,7 @@ updates:
         patterns:
           - "*"
         exclude-patterns:
-          - "JackPlowman/reusable-workflows"
+          - "JackPlowman/reusable-workflows-2026"
         update-types:
           - "patch"
           - "minor"
