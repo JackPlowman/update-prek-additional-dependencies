@@ -1,3 +1,4 @@
+# Copyright (c) 2026 Jack Plowman
 # /// script
 # requires-python = ">=3.14"
 # dependencies = [
